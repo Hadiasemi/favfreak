@@ -1,4 +1,4 @@
-module github.com/Hadiasemi/FavFreak.go
+module github.com/Hadiasemi/FavFreak
 
 go 1.22.0
 
