@@ -1,8 +1,6 @@
-# favfreak.go
-
-### Title: **favfreak: Favicon Hash Detection Tool for Bug Bounty Hunters**
-
+# **Favicon Hash Detection Tool for Bug Bounty Hunters**
 ---
+![image](./favfreak.png)
 
 ## Introduction
 
