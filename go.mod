@@ -1,6 +1,6 @@
 module github.com/Hadiasemi/favfreak
 
-go 1.22.0
+go 1.23
 
 require (
 	github.com/fatih/color v1.17.0
