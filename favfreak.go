@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/fatih/color"
-	"golang.org/x/net/html"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -18,8 +16,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/spaolacci/murmur3"
+	"github.com/fatih/color"
+	"golang.org/x/net/html"
 
+	"github.com/spaolacci/murmur3"
 )
 
 type Result struct {
@@ -28,15 +28,13 @@ type Result struct {
 	URL      string
 }
 
-
 func printFancyBanner() {
-	
+
 	green := color.New(color.FgGreen).SprintFunc()
 	red := color.New(color.FgRed).SprintFunc()
 	purple := color.New(color.FgMagenta).SprintFunc()
-	white := color.New(color.FgWhite).SprintFunc() 
+	white := color.New(color.FgWhite).SprintFunc()
 
-	
 	fmt.Println(green(`
   █████▒▄▄▄    ██▒   █▓  █████▒██▀███  ▓█████ ▄▄▄       ██ ▄█▀
 ▓██   ▒▒████▄ ▓██░   █▒▓██   ▒▓██ ▒ ██▒▓█   ▀▒████▄     ██▄█▒ 
@@ -50,30 +48,26 @@ func printFancyBanner() {
                    ░                                          
 	`))
 
-	
 	tagline := fmt.Sprintf("%s⚔ %s %s %s⚔",
-		red(""),                         
-		purple("FavFreak"),              
-		white("- Favicon Hash Breaker"), 
-		red(""),                         
+		red(""),
+		purple("FavFreak"),
+		white("- Favicon Hash Breaker"),
+		red(""),
 	)
 
-	
 	credits := fmt.Sprintf("%s💀 %s%s%s %s %s",
 		purple("- Coded by"),
-		red("3>"), 
+		red("3>"),
 		green("Hadi Asemi"),
-		red("<3"),  
-		red(" 💀"),  
-		purple(""), 
+		red("<3"),
+		red(" 💀"),
+		purple(""),
 	)
 
 	fmt.Println(tagline)
 	fmt.Println(credits)
 	fmt.Println()
 }
-
-
 
 func fetchFaviconFromHTML(url string) (string, error) {
 	resp, err := http.Get(url)
@@ -114,7 +108,6 @@ func fetchFaviconFromHTML(url string) (string, error) {
 
 	f(doc)
 
-	
 	if faviconURL != "" {
 		if !strings.HasPrefix(faviconURL, "http") {
 			if strings.HasPrefix(faviconURL, "/") {
@@ -129,7 +122,6 @@ func fetchFaviconFromHTML(url string) (string, error) {
 
 	return "", fmt.Errorf("no favicon found")
 }
-
 
 func FaviconHashesFromURL(faviconURL string) (uint32, string, error) {
 	resp, err := http.Get(faviconURL)
@@ -156,7 +148,6 @@ func FaviconHashesFromURL(faviconURL string) (uint32, string, error) {
 
 	return mmh3Hash, md5HashString, nil
 }
-
 
 func ensureURLScheme(url string) string {
 	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
@@ -190,41 +181,49 @@ func worker(urls <-chan string, results chan<- Result, wg *sync.WaitGroup) {
 }
 
 func main() {
-	
+
 	printFancyBanner()
 
-	
 	shodanFlag := flag.Bool("shodan", false, "Generate a Shodan search dork")
 	zoomeyeFlag := flag.Bool("zoomeye", false, "Generate a ZoomEye search dork")
 	censysFlag := flag.Bool("censys", false, "Generate a Censys search dork")
 	allFlag := flag.Bool("all", false, "Generate search dorks for all platforms")
 
-	
 	fingerprintInput := flag.String("fingerprint", "", "A JSON string or file path with favicon hashes and names")
 
-	
 	flag.Parse()
 
-	
+	// Check if there's no input from stdin
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		log.Fatalf("Error checking stdin: %v", err)
+	}
+
+	// Check if stdin is not coming from a pipe or file
+	if (stat.Mode() & os.ModeCharDevice) != 0 {
+		fmt.Println("Usage: cat file.txt | favfreak [options]")
+		fmt.Println("Options:")
+		flag.PrintDefaults()
+		return
+	}
+
 	var fingerprintDict map[string]string
 
-	
 	if *fingerprintInput != "" {
-		
+
 		if _, err := os.Stat(*fingerprintInput); err == nil {
-			
+
 			fileContent, err := ioutil.ReadFile(*fingerprintInput)
 			if err != nil {
 				log.Fatalf("Failed to read fingerprint file: %v", err)
 			}
 
-			
 			err = json.Unmarshal(fileContent, &fingerprintDict)
 			if err != nil {
 				log.Fatalf("Failed to parse fingerprint file: %v", err)
 			}
 		} else {
-			
+
 			err := json.Unmarshal([]byte(*fingerprintInput), &fingerprintDict)
 			if err != nil {
 				log.Fatalf("Failed to parse fingerprint JSON: %v", err)
@@ -232,7 +231,6 @@ func main() {
 		}
 	}
 
-	
 	scanner := bufio.NewScanner(os.Stdin)
 
 	urls := make(chan string, 10)
@@ -273,7 +271,6 @@ func main() {
 		hashGroups[result.MMH3Hash] = append(hashGroups[result.MMH3Hash], result)
 	}
 
-	
 	fmt.Println("\n================= Favicon Hash Results =================")
 	for mmh3Hash, resultList := range hashGroups {
 		color.Yellow("[MMH3 Hash] %d", mmh3Hash)
@@ -290,16 +287,14 @@ func main() {
 				color.Cyan("Censys: https://search.censys.io/search?resource=hosts&sort=RELEVANCE&per_page=25&virtual_hosts=EXCLUDE&q=services.http.response.favicons.md5_hash:%s", res.MD5Hash)
 			}
 		}
-		fmt.Println() 
+		fmt.Println()
 	}
 
-	
 	if len(fingerprintDict) > 0 {
 		fmt.Println("\n================= [FingerPrint Based Detection Results] =================")
 
 		fingerprintCounts := make(map[string]int)
 
-		
 		for mmh3Hash, resultList := range hashGroups {
 			hashStr := fmt.Sprintf("%d", mmh3Hash)
 			if name, exists := fingerprintDict[hashStr]; exists {
@@ -307,7 +302,6 @@ func main() {
 			}
 		}
 
-		
 		for name, count := range fingerprintCounts {
 			color.Red("[%s] - count: %d", name, count)
 		}
