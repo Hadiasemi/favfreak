@@ -572,7 +572,7 @@ var defaultFingerprintDict = map[int]string{
 }
 
 func fetchFaviconFromHTML(url string) (string, error) {
-	// Function to fetch favicon URL from HTML
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch HTML: %v", err)
@@ -626,7 +626,6 @@ func fetchFaviconFromHTML(url string) (string, error) {
 	return "", fmt.Errorf("no favicon found")
 }
 
-// Function to calculate both MMH3 and MD5 hashes of a favicon from a provided URL
 func FaviconHashesFromURL(faviconURL string) (uint32, string, error) {
 	resp, err := http.Get(faviconURL)
 	if err != nil {
@@ -643,17 +642,14 @@ func FaviconHashesFromURL(faviconURL string) (uint32, string, error) {
 	re := regexp.MustCompile(`.{1,76}`)
 	withNewlines := re.ReplaceAllString(b64, "$0\n")
 
-	// Hash the result using MMH3 (for Shodan/ZoomEye)
 	mmh3Hash := murmur3.Sum32([]byte(withNewlines))
 
-	// Hash the result using MD5 (for Censys)
 	md5Hash := md5.Sum(data)
 	md5HashString := hex.EncodeToString(md5Hash[:])
 
 	return mmh3Hash, md5HashString, nil
 }
 
-// Function to ensure URLs have a scheme (http:// or https://)
 func ensureURLScheme(url string) string {
 	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
 		return "https://" + url
@@ -661,7 +657,6 @@ func ensureURLScheme(url string) string {
 	return url
 }
 
-// Worker function to process a URL and return a hash result
 func worker(urls <-chan string, results chan<- Result, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for url := range urls {
@@ -689,38 +684,44 @@ func worker(urls <-chan string, results chan<- Result, wg *sync.WaitGroup) {
 func main() {
 	printFancyBanner()
 
-	// Define flags for Shodan, ZoomEye, Censys, and the combined -all flag
 	shodanFlag := flag.Bool("shodan", false, "Generate a Shodan search dork")
 	zoomeyeFlag := flag.Bool("zoomeye", false, "Generate a ZoomEye search dork")
 	censysFlag := flag.Bool("censys", false, "Generate a Censys search dork")
 	allFlag := flag.Bool("all", false, "Generate search dorks for all platforms")
 
-	// Define flag for the fingerprint dictionary
 	fingerprintInput := flag.String("fingerprint", "", "A JSON string or file path with favicon hashes and names")
 
-	// Parse the flags
 	flag.Parse()
 
-	// Initialize the fingerprint dictionary with default values
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		log.Fatalf("Error checking stdin: %v", err)
+	}
+
+	if (stat.Mode() & os.ModeCharDevice) != 0 {
+		fmt.Println("Usage: cat file.txt | favfreak [options]")
+		fmt.Println("Options:")
+		flag.PrintDefaults()
+		return
+	}
+
 	fingerprintDict := defaultFingerprintDict
 
-	// Check if the fingerprint input is provided
 	if *fingerprintInput != "" {
-		// First check if the input is a valid file path
+
 		if _, err := os.Stat(*fingerprintInput); err == nil {
-			// If it's a valid file path, read the file content
+
 			fileContent, err := ioutil.ReadFile(*fingerprintInput)
 			if err != nil {
 				log.Fatalf("Failed to read fingerprint file: %v", err)
 			}
 
-			// Parse the file content as a JSON dictionary
 			err = json.Unmarshal(fileContent, &fingerprintDict)
 			if err != nil {
 				log.Fatalf("Failed to parse fingerprint file: %v", err)
 			}
 		} else {
-			// If it's not a file, assume it's a direct JSON string
+
 			err := json.Unmarshal([]byte(*fingerprintInput), &fingerprintDict)
 			if err != nil {
 				log.Fatalf("Failed to parse fingerprint JSON: %v", err)
@@ -728,7 +729,6 @@ func main() {
 		}
 	}
 
-	// Scanner for reading input
 	scanner := bufio.NewScanner(os.Stdin)
 
 	urls := make(chan string, 10)
@@ -788,20 +788,17 @@ func main() {
 		fmt.Println()
 	}
 
-	// FingerPrint Based Detection Results
 	if len(fingerprintDict) > 0 {
 		fmt.Println("\n================= [FingerPrint Based Detection Results] =================")
 
 		fingerprintCounts := make(map[string]int)
 
-		// Loop over all hashes and check if they match the user-provided dictionary
 		for mmh3Hash, resultList := range hashGroups {
 			if name, exists := fingerprintDict[int(mmh3Hash)]; exists {
 				fingerprintCounts[name] += len(resultList)
 			}
 		}
 
-		// Output the results in the requested format
 		for name, count := range fingerprintCounts {
 			color.Red("[%s] - count: %d", name, count)
 		}
