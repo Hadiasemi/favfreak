@@ -769,6 +769,7 @@ func main() {
 		hashGroups[result.MMH3Hash] = append(hashGroups[result.MMH3Hash], result)
 	}
 
+
 	fmt.Println("\n================= Favicon Hash Results =================")
 	for mmh3Hash, resultList := range hashGroups {
 		color.Yellow("[MMH3 Hash] %d", mmh3Hash)
