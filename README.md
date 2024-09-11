@@ -4,9 +4,11 @@
 
 ## Introduction
 
-**favfreak** is a tool designed to help bug bounty hunters identify websites using the same favicon across different domains. By generating unique hashes from favicons, you can uncover hidden infrastructure, find shadow IT assets, and increase your chances of discovering vulnerable services.
+**FavFreak** is a tool designed to help bug bounty hunters identify websites using the same favicon across different domains. By generating unique hashes from favicons, you can uncover hidden infrastructure, find shadow IT assets, and increase your chances of discovering vulnerable services.
 
 This tool supports search engines like **Shodan**, **ZoomEye**, and **Censys** to help you quickly and efficiently discover similar systems across the internet.
+
+The original concept and Python implementation were created by [**Devansh Batham**](https://github.com/devanshbatham/FavFreak), which inspired the development of this improved version in **Go**. In this version, we’ve enhanced performance and added additional features like integrated search dork generation for multiple platforms, making it a more efficient tool for bug bounty hunters and cybersecurity researchers.
 
 ---
 
